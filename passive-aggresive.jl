@@ -31,9 +31,9 @@ function train(passiveAggresive::PassiveAggresive, features::Array, label::Int)
         z[r] = 1
         z[s] = -1
         z = z*features'
-        hoge = sum(map(a -> a*a, z))
-        #tau = loss/hoge
-        tau = loss/(hoge + 1.0/10.0) # PA-2
+        n = sum(map(a -> a*a, z))
+        #tau = loss/n
+        tau = loss/(n + 1.0/100.0) # PA-2
         passiveAggresive.weight += tau*z
     end
 end
@@ -43,12 +43,8 @@ function predict(passiveAggresive::PassiveAggresive, features::Array)
     return indmax(losses)
 end
 
-numClass = 10
+# pre-processing
 numFeature = length(dataset[1][1])
-
-passiveAggresive = PassiveAggresive(numClass, numFeature)
-
-
 means = zeros(Float64, numFeature)
 
 for (features, label) in dataset
@@ -66,8 +62,16 @@ end
 
 vars = vars / length(dataset)
 
-dataset = map(data -> ((data[1]- means)./sqrt(vars), data[2]), dataset)
 
+dataset = map(data -> (append!((data[1]- means)./sqrt(vars), [1.0]), data[2]), dataset)
+
+# create passive aggresive instance
+numClass = 10
+numFeature = length(dataset[1][1])
+
+passiveAggresive = PassiveAggresive(numClass, numFeature)
+
+# train
 for i in 1:30
     shuffle!(dataset)
     for (features, label) in dataset
@@ -75,10 +79,12 @@ for i in 1:30
     end
 end
 
+# test
 correct = 0.0
 for (features, label) in dataset
     predictLabel = predict(passiveAggresive, features)
     if predictLabel == label correct += 1 end
+    #println(predictLabel, " ", label)
 end
 
 println(100.0*correct/length(dataset), "%")
