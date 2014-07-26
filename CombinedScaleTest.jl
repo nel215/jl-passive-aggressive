@@ -1,5 +1,5 @@
-include("passive-aggresive.jl")
-include("dataset.jl")
+include("PassiveAggresive.jl")
+include("Dataset.jl")
 
 function main()
     (numClass, numFeature, train_dataset) = getCombinedScaleTrainData()
