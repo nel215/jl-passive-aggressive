@@ -27,13 +27,13 @@ function train(passiveAggresive::PassiveAggresive, features::Array, label::Int)
     end
     loss = max(0.0, 1.0 - (losses[r] - losses[s]))
     if loss > 0
-        z = zeros(numClass)
+        z = zeros(passiveAggresive.numClass)
         z[r] = 1
         z[s] = -1
         z = z*features'
         n = sum(map(a -> a*a, z))
         #tau = loss/n
-        tau = loss/(n + 1.0/100.0) # PA-2
+        tau = loss/(n + 1.0/4.0) # PA-2
         passiveAggresive.weight += tau*z
     end
 end
@@ -43,50 +43,53 @@ function predict(passiveAggresive::PassiveAggresive, features::Array)
     return indmax(losses)
 end
 
-# pre-processing
-numFeature = length(dataset[1][1])
-means = zeros(Float64, numFeature)
+function main()
+    # pre-processing
+    numFeature = length(dataset[1][1])
+    means = zeros(Float64, numFeature)
 
-for (features, label) in dataset
-    means = means + features
-end
-
-means = means / length(dataset)
-
-vars = zeros(Float64, numFeature)
-
-for (features, label) in dataset
-    tmp = features - means
-    vars = tmp .* tmp
-end
-
-vars = vars / length(dataset)
-
-
-dataset = map(data -> (append!((data[1]- means)./sqrt(vars), [1.0]), data[2]), dataset)
-
-# create passive aggresive instance
-numClass = 10
-numFeature = length(dataset[1][1])
-
-passiveAggresive = PassiveAggresive(numClass, numFeature)
-
-# train
-for i in 1:30
-    shuffle!(dataset)
     for (features, label) in dataset
-        train(passiveAggresive, features, label)
+        means = means + features
     end
+
+    means = means / length(dataset)
+
+    vars = zeros(Float64, numFeature)
+
+    for (features, label) in dataset
+        tmp = features - means
+        vars = tmp .* tmp
+    end
+
+    vars = vars / length(dataset)
+
+
+    dataset = map(data -> (append!((data[1]- means)./sqrt(vars), [1.0]), data[2]), dataset)
+
+    # create passive aggresive instance
+    numClass = 10
+    numFeature = length(dataset[1][1])
+
+    passiveAggresive = PassiveAggresive(numClass, numFeature)
+
+    # train
+    for i in 1:30
+        shuffle!(dataset)
+        for (features, label) in dataset
+            train(passiveAggresive, features, label)
+        end
+    end
+
+    # test
+    correct = 0.0
+    for (features, label) in dataset
+        predictLabel = predict(passiveAggresive, features)
+        if predictLabel == label correct += 1 end
+        #println(predictLabel, " ", label)
+    end
+
+    println(100.0*correct/length(dataset), "%")
+
+
 end
-
-# test
-correct = 0.0
-for (features, label) in dataset
-    predictLabel = predict(passiveAggresive, features)
-    if predictLabel == label correct += 1 end
-    #println(predictLabel, " ", label)
-end
-
-println(100.0*correct/length(dataset), "%")
-
 
