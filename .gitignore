@@ -1,2 +1,4 @@
 winequality-red.csv
 *.swp
+combined_scale*
+rcv1_train.binary*
